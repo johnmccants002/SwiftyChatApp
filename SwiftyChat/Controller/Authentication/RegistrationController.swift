@@ -109,6 +109,22 @@ class RegistrationController: UIViewController {
         fullnameTextField.addTarget(self, action: #selector(textDidChange), for: .editingChanged)
         usernameTextField.addTarget(self, action: #selector(textDidChange), for: .editingChanged)
         
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow), name: UIResponder.keyboardWillShowNotification, object: nil)
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide), name: UIResponder.keyboardWillHideNotification, object: nil)
+        
+    }
+    
+    @objc func keyboardWillShow() {
+        if view.frame.origin.y == 0 {
+            self.view.frame.origin.y -= 88
+        }
+    }
+    
+    @objc func keyboardWillHide() {
+        if view.frame.origin.y != 0 {
+            view.frame.origin.y = 0
+        }
     }
     
     @objc func textDidChange(sender: UITextField) {
@@ -141,12 +157,15 @@ class RegistrationController: UIViewController {
             return
         }
         
+        showLoader(true, withText: "Signing Up")
         let credentials = RegistrationCredentials(email: email, password: password, fullname: fullName, username: username, profileImage: profileImage)
         AuthService.shared.createUser(credentials: credentials) { error in
             if let error = error {
                 print("DEBUG: Error creating user \(error.localizedDescription)")
+                self.showLoader(false)
                 return 
             }
+            self.showLoader(false)
             self.dismiss(animated: true, completion: nil)
         }
     }

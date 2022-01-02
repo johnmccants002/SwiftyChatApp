@@ -15,6 +15,18 @@ class ConversationsController: UIViewController {
     // MARK: -Properties
     
     private let tableView = UITableView()
+    private var conversations = [Conversation]()
+    
+    private let newMessageButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "plus"), for: .normal)
+        button.backgroundColor = .systemPurple
+        button.tintColor = .white
+        button.imageView?.setDimensions(width: 24, height: 24)
+        button.addTarget(self, action: #selector(showNewMessage), for: .touchUpInside)
+        
+        return button
+    }()
     
     
     // MARK: -Lifecycle
@@ -23,7 +35,14 @@ class ConversationsController: UIViewController {
         super.viewDidLoad()
         configureUI()
         authenticateUser()
-            }
+        fetchConversations()
+    
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        self.configureNavigationBar(title: "Messages", prefersLargeTitles: true)
+    }
     
     // MARK: -Helpers
     
@@ -35,8 +54,13 @@ class ConversationsController: UIViewController {
         tableView.rowHeight = 80
         tableView.delegate = self
         tableView.dataSource = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: reuseIdentifier)
+        tableView.register(ConversationCell.self, forCellReuseIdentifier: reuseIdentifier)
         
+    }
+    
+    func showChatController(forUser user: User) {
+        let controller = ChatController(user: user)
+        navigationController?.pushViewController(controller, animated: true)
     }
     
     func configureUI() {
@@ -45,37 +69,23 @@ class ConversationsController: UIViewController {
         let image = UIImage(systemName: "person.circle.fill")
         navigationItem.leftBarButtonItem = UIBarButtonItem(image: image, style: .plain, target: self, action: #selector(showProfile))
         
-        configureNavigationBar()
         configureTableView()
-
         
+        view.addSubview(newMessageButton)
+        newMessageButton.setDimensions(width: 56, height: 56)
+        newMessageButton.anchor(bottom: view.safeAreaLayoutGuide.bottomAnchor, right: view.rightAnchor, paddingBottom: 16, paddingRight: 24)
+        newMessageButton.layer.cornerRadius = 56 / 2
     }
     
     @objc func showProfile() {
-        print("123")
-        logout()
+        let controller = ProfileController(style: .insetGrouped)
+        controller.delegate = self
+        let nav = UINavigationController(rootViewController: controller)
+        nav.modalPresentationStyle = .fullScreen
+        present(nav, animated: true, completion: nil)
+        
     }
     
-    func configureNavigationBar() {
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
-        appearance.backgroundColor = .systemPurple
-        navigationController?.navigationBar.standardAppearance = appearance
-        navigationController?.navigationBar.compactAppearance = appearance
-        navigationController?.navigationBar.scrollEdgeAppearance = appearance
-        
-        navigationController?.navigationBar.prefersLargeTitles = true
-        
-        
-        appearance.backgroundColor = .systemPurple
-        navigationItem.title = "Messages"
-        navigationController?.navigationBar.tintColor = .white
-        navigationController?.navigationBar.isTranslucent = true
-        
-        navigationController?.navigationBar.overrideUserInterfaceStyle = .dark
-      
-    }
     
     func authenticateUser() {
         if Auth.auth().currentUser?.uid == nil {
@@ -83,6 +93,13 @@ class ConversationsController: UIViewController {
             presentLoginScreen()
         } else {
             print("DEBUG: User is logged in. Configure controller...")
+        }
+    }
+    
+    func fetchConversations() {
+        Service.fetchConversations { conversations in
+            self.conversations = conversations
+            self.tableView.reloadData()
         }
     }
     
@@ -103,22 +120,50 @@ class ConversationsController: UIViewController {
             self.present(nav, animated: true, completion: nil)
         }
     }
+    
+    
+    @objc func showNewMessage() {
+        let controller = NewMessageController()
+        controller.delegate = self
+        let nav = UINavigationController(rootViewController: controller)
+        nav.modalPresentationStyle = .fullScreen
+        present(nav, animated: true, completion: nil)
+    }
 }
 
 extension ConversationsController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier, for: indexPath)
-        cell.textLabel?.text = "Test Cell"
+        let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier, for: indexPath) as! ConversationCell
+        cell.conversation = conversations[indexPath.row]
+        
+        
+    
         return cell
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        2
+        conversations.count
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print(indexPath.row)
+        let user = conversations[indexPath.row].user
+        showChatController(forUser: user)
     }
     
+    
+}
+
+extension ConversationsController: NewMessageControllerDelegate {
+    func controller(_ controller: NewMessageController, wantsToStartChatWith user: User) {
+        showChatController(forUser: user)
+    }
+    
+    
+}
+
+extension ConversationsController: ProfileControllerDelegate {
+    func handleLogout() {
+        logout()
+    }
     
 }

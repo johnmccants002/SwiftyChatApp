@@ -7,6 +7,7 @@
 
 import Foundation
 import UIKit
+import JGProgressHUD
 
 public enum SimpleAnimationEdge {
   case none
@@ -225,6 +226,7 @@ extension UIColor {
 
 extension UIViewController {
 
+    static let hud = JGProgressHUD(style: .dark)
     @objc func hideKeyboardWhenTappedAround() {
         let tap: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action:    #selector(UIViewController.dismissKeyboard))
         tap.cancelsTouchesInView = false
@@ -233,6 +235,40 @@ extension UIViewController {
 
     @objc func dismissKeyboard() {
         view.endEditing(true)
+    }
+    
+    func showLoader(_ show: Bool, withText text: String? = "Loading") {
+        view.endEditing(true)
+        UIViewController.hud.textLabel.text = text
+        
+        
+        if show {
+            UIViewController.hud.show(in: view)
+        } else {
+            UIViewController.hud.dismiss()
+        }
+        
+    }
+    
+    func configureNavigationBar(title: String, prefersLargeTitles: Bool) {
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
+        appearance.backgroundColor = .systemPurple
+        navigationController?.navigationBar.standardAppearance = appearance
+        navigationController?.navigationBar.compactAppearance = appearance
+        navigationController?.navigationBar.scrollEdgeAppearance = appearance
+        
+        navigationController?.navigationBar.prefersLargeTitles = prefersLargeTitles
+        
+        
+        appearance.backgroundColor = .systemPurple
+        navigationItem.title = title
+        navigationController?.navigationBar.tintColor = .white
+        navigationController?.navigationBar.isTranslucent = true
+        
+        navigationController?.navigationBar.overrideUserInterfaceStyle = .dark
+      
     }
 }
 
